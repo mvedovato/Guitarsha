@@ -22,6 +22,11 @@ class MainActivity : Activity() {
     private lateinit var seekDrive: CircularSeekBar
     private lateinit var seekTone: CircularSeekBar
 
+    // 👉 Textos centrales
+    private lateinit var tvVolumeValue: TextView
+    private lateinit var tvDriveValue: TextView
+    private lateinit var tvToneValue: TextView
+
     private lateinit var btnVolPlus: Button
     private lateinit var btnVolMinus: Button
     private lateinit var btnDrvPlus: Button
@@ -44,52 +49,62 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Bluetooth
         btAdapter = BluetoothAdapter.getDefaultAdapter()
-
         if (!btAdapter.isEnabled) {
             startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
         }
 
+        // UI base
         tvBtStatus = findViewById(R.id.tvBtStatus)
         btnConectar = findViewById(R.id.btnConectar)
-
         btnConectar.setOnClickListener {
             conectarBluetooth("guitarsha")
         }
 
+        // Knobs
         seekVolume = findViewById(R.id.seekVolume)
-        seekDrive = findViewById(R.id.seekDrive)
-        seekTone = findViewById(R.id.seekTone)
+        seekDrive  = findViewById(R.id.seekDrive)
+        seekTone   = findViewById(R.id.seekTone)
 
-        // Configuración por código (CLAVE)
-        seekVolume.max = 100f
-        seekVolume.progress = 50f
+        // Textos centrales
+        tvVolumeValue = findViewById(R.id.tvVolumeValue)
+        tvDriveValue  = findViewById(R.id.tvDriveValue)
+        tvToneValue   = findViewById(R.id.tvToneValue)
 
-        seekDrive.max = 100f
-        seekDrive.progress = 50f
+        // Configuración inicial
+        initKnob(seekVolume, tvVolumeValue)
+        initKnob(seekDrive,  tvDriveValue)
+        initKnob(seekTone,   tvToneValue)
 
-        seekTone.max = 100f
-        seekTone.progress = 50f
-
-        btnVolPlus = findViewById(R.id.btnVolPlus)
+        // Botones
+        btnVolPlus  = findViewById(R.id.btnVolPlus)
         btnVolMinus = findViewById(R.id.btnVolMinus)
-        btnDrvPlus = findViewById(R.id.btnDrvPlus)
+        btnDrvPlus  = findViewById(R.id.btnDrvPlus)
         btnDrvMinus = findViewById(R.id.btnDrvMinus)
-        btnTonPlus = findViewById(R.id.btnTonPlus)
+        btnTonPlus  = findViewById(R.id.btnTonPlus)
         btnTonMinus = findViewById(R.id.btnTonMinus)
 
-        configurarControl(seekVolume, "VOL")
-        configurarControl(seekDrive, "DRV")
-        configurarControl(seekTone, "TON")
+        // Listeners
+        configurarControl(seekVolume, tvVolumeValue, "VOL")
+        configurarControl(seekDrive,  tvDriveValue,  "DRV")
+        configurarControl(seekTone,   tvToneValue,   "TON")
 
-        btnVolPlus.setOnClickListener { subir(seekVolume) }
-        btnVolMinus.setOnClickListener { bajar(seekVolume) }
+        btnVolPlus.setOnClickListener  { subir(seekVolume) }
+        btnVolMinus.setOnClickListener{ bajar(seekVolume) }
 
-        btnDrvPlus.setOnClickListener { subir(seekDrive) }
-        btnDrvMinus.setOnClickListener { bajar(seekDrive) }
+        btnDrvPlus.setOnClickListener  { subir(seekDrive) }
+        btnDrvMinus.setOnClickListener{ bajar(seekDrive) }
 
-        btnTonPlus.setOnClickListener { subir(seekTone) }
-        btnTonMinus.setOnClickListener { bajar(seekTone) }
+        btnTonPlus.setOnClickListener  { subir(seekTone) }
+        btnTonMinus.setOnClickListener{ bajar(seekTone) }
+    }
+
+    // 🔧 Inicializa knob + texto
+    private fun initKnob(seek: CircularSeekBar, label: TextView) {
+        seek.max = 100f
+        seek.progress = 50f
+        label.text = "50"
     }
 
     private fun subir(seek: CircularSeekBar) {
@@ -100,7 +115,12 @@ class MainActivity : Activity() {
         seek.progress = (seek.progress - 1).coerceAtLeast(0f)
     }
 
-    private fun configurarControl(seek: CircularSeekBar, tag: String) {
+    // 🎛️ Knob + envío BT + update texto
+    private fun configurarControl(
+        seek: CircularSeekBar,
+        label: TextView,
+        tag: String
+    ) {
         seek.setOnSeekBarChangeListener(object :
             CircularSeekBar.OnCircularSeekBarChangeListener {
 
@@ -109,7 +129,9 @@ class MainActivity : Activity() {
                 progress: Float,
                 fromUser: Boolean
             ) {
-                enviarValor(tag, progress.toInt())
+                val value = progress.toInt()
+                label.text = value.toString()
+                enviarValor(tag, value)
             }
 
             override fun onStartTrackingTouch(seekBar: CircularSeekBar?) {}
@@ -117,6 +139,7 @@ class MainActivity : Activity() {
         })
     }
 
+    // 📡 Envío BT
     private fun enviarValor(param: String, value: Int) {
         if (!btConectado || btOutput == null) return
 
@@ -129,7 +152,6 @@ class MainActivity : Activity() {
 
         val payload = ">$paramChar,$value,".toByteArray(Charsets.US_ASCII)
         val chk = calcularXor(payload)
-
         val frame = payload + chk + '<'.code.toByte()
 
         try {
@@ -149,6 +171,7 @@ class MainActivity : Activity() {
         return xor.toByte()
     }
 
+    // 🔵 Bluetooth
     private fun conectarBluetooth(nombre: String) {
         if (!tienePermisoBluetooth()) {
             pedirPermisoBluetooth()
