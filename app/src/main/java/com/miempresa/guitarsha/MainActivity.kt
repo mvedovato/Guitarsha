@@ -17,6 +17,9 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import java.io.IOException
 import me.tankery.lib.circularseekbar.CircularSeekBar
+import android.animation.ValueAnimator
+import android.view.animation.DecelerateInterpolator
+
 
 class MainActivity : Activity() {
 
@@ -176,18 +179,35 @@ class MainActivity : Activity() {
         Toast.makeText(this, "Preset $n guardado", Toast.LENGTH_SHORT).show()
     }
 
+    // 🔵 Presets con animación
     private fun cargarPreset(n: Int) {
         val json = prefs.getString(presetKeys[n-1], null) ?: return
         val parts = json.split(",")
         if (parts.size != 3) return
 
-        val vol = parts[0].toIntOrNull() ?: return
-        val drv = parts[1].toIntOrNull() ?: return
-        val ton = parts[2].toIntOrNull() ?: return
+        val targetVol = parts[0].toIntOrNull() ?: return
+        val targetDrv = parts[1].toIntOrNull() ?: return
+        val targetTon = parts[2].toIntOrNull() ?: return
 
-        seekVolume.progress = vol.toFloat()
-        seekDrive.progress = drv.toFloat()
-        seekTone.progress = ton.toFloat()
+        val startVol = seekVolume.progress
+        val startDrv = seekDrive.progress
+        val startTon = seekTone.progress
+
+        val anim = ValueAnimator.ofFloat(0f, 1f)
+        anim.duration = 500 // duración en ms
+        anim.interpolator = DecelerateInterpolator()
+        anim.addUpdateListener { valueAnimator ->
+            val fraction = valueAnimator.animatedValue as Float
+
+            seekVolume.progress = startVol + (targetVol - startVol) * fraction
+            seekDrive.progress  = startDrv + (targetDrv - startDrv) * fraction
+            seekTone.progress   = startTon + (targetTon - startTon) * fraction
+
+            tvVolumeValue.text = seekVolume.progress.toInt().toString()
+            tvDriveValue.text  = seekDrive.progress.toInt().toString()
+            tvToneValue.text   = seekTone.progress.toInt().toString()
+        }
+        anim.start()
     }
 
     // 🔵 Bluetooth
