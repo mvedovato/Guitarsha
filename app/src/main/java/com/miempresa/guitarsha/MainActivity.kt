@@ -1,11 +1,13 @@
 package com.miempresa.guitarsha
 
 import android.bluetooth.*
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import android.app.Activity
 import java.io.OutputStream
 import java.util.UUID
@@ -22,7 +24,6 @@ class MainActivity : Activity() {
     private lateinit var seekDrive: CircularSeekBar
     private lateinit var seekTone: CircularSeekBar
 
-    // 👉 Textos centrales
     private lateinit var tvVolumeValue: TextView
     private lateinit var tvDriveValue: TextView
     private lateinit var tvToneValue: TextView
@@ -45,39 +46,38 @@ class MainActivity : Activity() {
     private val SPP_UUID: UUID =
         UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
 
+    // Presets (SharedPreferences)
+    private val presetKeys = arrayOf("P1", "P2", "P3", "P4", "P5")
+    private lateinit var prefs: android.content.SharedPreferences
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        prefs = getSharedPreferences("presets", Context.MODE_PRIVATE)
+
         // Bluetooth
         btAdapter = BluetoothAdapter.getDefaultAdapter()
-        if (!btAdapter.isEnabled) {
-            startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-        }
+        if (!btAdapter.isEnabled) startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
 
         // UI base
         tvBtStatus = findViewById(R.id.tvBtStatus)
         btnConectar = findViewById(R.id.btnConectar)
-        btnConectar.setOnClickListener {
-            conectarBluetooth("guitarsha")
-        }
+        btnConectar.setOnClickListener { conectarBluetooth("guitarsha") }
 
         // Knobs
         seekVolume = findViewById(R.id.seekVolume)
         seekDrive  = findViewById(R.id.seekDrive)
         seekTone   = findViewById(R.id.seekTone)
 
-        // Textos centrales
         tvVolumeValue = findViewById(R.id.tvVolumeValue)
         tvDriveValue  = findViewById(R.id.tvDriveValue)
         tvToneValue   = findViewById(R.id.tvToneValue)
 
-        // Configuración inicial
         initKnob(seekVolume, tvVolumeValue)
         initKnob(seekDrive,  tvDriveValue)
         initKnob(seekTone,   tvToneValue)
 
-        // Botones
         btnVolPlus  = findViewById(R.id.btnVolPlus)
         btnVolMinus = findViewById(R.id.btnVolMinus)
         btnDrvPlus  = findViewById(R.id.btnDrvPlus)
@@ -85,22 +85,31 @@ class MainActivity : Activity() {
         btnTonPlus  = findViewById(R.id.btnTonPlus)
         btnTonMinus = findViewById(R.id.btnTonMinus)
 
-        // Listeners
         configurarControl(seekVolume, tvVolumeValue, "VOL")
         configurarControl(seekDrive,  tvDriveValue,  "DRV")
         configurarControl(seekTone,   tvToneValue,   "TON")
 
         btnVolPlus.setOnClickListener  { subir(seekVolume) }
-        btnVolMinus.setOnClickListener{ bajar(seekVolume) }
-
+        btnVolMinus.setOnClickListener { bajar(seekVolume) }
         btnDrvPlus.setOnClickListener  { subir(seekDrive) }
-        btnDrvMinus.setOnClickListener{ bajar(seekDrive) }
-
+        btnDrvMinus.setOnClickListener { bajar(seekDrive) }
         btnTonPlus.setOnClickListener  { subir(seekTone) }
-        btnTonMinus.setOnClickListener{ bajar(seekTone) }
+        btnTonMinus.setOnClickListener { bajar(seekTone) }
+
+        // Presets: safe find + listener
+        for (i in 1..5) {
+            val resId = resources.getIdentifier("btnP$i", "id", packageName)
+            val btn = findViewById<Button?>(resId)
+            btn?.let { button ->
+                button.setOnClickListener { cargarPreset(i) }
+                button.setOnLongClickListener {
+                    guardarPreset(i)
+                    true
+                }
+            }
+        }
     }
 
-    // 🔧 Inicializa knob + texto
     private fun initKnob(seek: CircularSeekBar, label: TextView) {
         seek.max = 100f
         seek.progress = 50f
@@ -115,20 +124,11 @@ class MainActivity : Activity() {
         seek.progress = (seek.progress - 1).coerceAtLeast(0f)
     }
 
-    // 🎛️ Knob + envío BT + update texto
-    private fun configurarControl(
-        seek: CircularSeekBar,
-        label: TextView,
-        tag: String
-    ) {
+    private fun configurarControl(seek: CircularSeekBar, label: TextView, tag: String) {
         seek.setOnSeekBarChangeListener(object :
             CircularSeekBar.OnCircularSeekBarChangeListener {
 
-            override fun onProgressChanged(
-                circularSeekBar: CircularSeekBar?,
-                progress: Float,
-                fromUser: Boolean
-            ) {
+            override fun onProgressChanged(circularSeekBar: CircularSeekBar?, progress: Float, fromUser: Boolean) {
                 val value = progress.toInt()
                 label.text = value.toString()
                 enviarValor(tag, value)
@@ -139,7 +139,6 @@ class MainActivity : Activity() {
         })
     }
 
-    // 📡 Envío BT
     private fun enviarValor(param: String, value: Int) {
         if (!btConectado || btOutput == null) return
 
@@ -154,9 +153,8 @@ class MainActivity : Activity() {
         val chk = calcularXor(payload)
         val frame = payload + chk + '<'.code.toByte()
 
-        try {
-            btOutput!!.write(frame)
-        } catch (e: IOException) {
+        try { btOutput!!.write(frame) }
+        catch (e: IOException) {
             btConectado = false
             runOnUiThread {
                 tvBtStatus.text = "Desconectado"
@@ -171,15 +169,32 @@ class MainActivity : Activity() {
         return xor.toByte()
     }
 
+    // 🔵 Presets
+    private fun guardarPreset(n: Int) {
+        val json = "${seekVolume.progress.toInt()},${seekDrive.progress.toInt()},${seekTone.progress.toInt()}"
+        prefs.edit().putString(presetKeys[n-1], json).apply()
+        Toast.makeText(this, "Preset $n guardado", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun cargarPreset(n: Int) {
+        val json = prefs.getString(presetKeys[n-1], null) ?: return
+        val parts = json.split(",")
+        if (parts.size != 3) return
+
+        val vol = parts[0].toIntOrNull() ?: return
+        val drv = parts[1].toIntOrNull() ?: return
+        val ton = parts[2].toIntOrNull() ?: return
+
+        seekVolume.progress = vol.toFloat()
+        seekDrive.progress = drv.toFloat()
+        seekTone.progress = ton.toFloat()
+    }
+
     // 🔵 Bluetooth
     private fun conectarBluetooth(nombre: String) {
-        if (!tienePermisoBluetooth()) {
-            pedirPermisoBluetooth()
-            return
-        }
+        if (!tienePermisoBluetooth()) { pedirPermisoBluetooth(); return }
 
-        val device = btAdapter.bondedDevices.firstOrNull { it.name == nombre }
-            ?: return
+        val device = btAdapter.bondedDevices.firstOrNull { it.name == nombre } ?: return
 
         try {
             btSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
@@ -200,15 +215,11 @@ class MainActivity : Activity() {
 
     private fun tienePermisoBluetooth(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-                ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.BLUETOOTH_CONNECT
-                ) == PackageManager.PERMISSION_GRANTED
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
 
     private fun pedirPermisoBluetooth() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ActivityCompat.requestPermissions(
-                this,
+            ActivityCompat.requestPermissions(this,
                 arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
                 1001
             )

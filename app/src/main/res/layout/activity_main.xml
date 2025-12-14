@@ -63,7 +63,6 @@
                 app:layout_constraintEnd_toEndOf="parent"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- Botones Volume -->
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="wrap_content"
@@ -118,7 +117,6 @@
                 app:layout_constraintEnd_toEndOf="parent"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- Botones Drive -->
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="wrap_content"
@@ -173,7 +171,6 @@
                 app:layout_constraintEnd_toEndOf="parent"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- Botones Tone -->
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="wrap_content"
@@ -191,6 +188,27 @@
                 android:text="+"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <!-- ===== PRESETS ===== -->
+        <TextView
+            android:text="Presets"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"/>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp">
+
+            <Button android:id="@+id/btnP1" android:text="P1" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <Button android:id="@+id/btnP2" android:text="P2" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <Button android:id="@+id/btnP3" android:text="P3" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <Button android:id="@+id/btnP4" android:text="P4" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <Button android:id="@+id/btnP5" android:text="P5" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
         </LinearLayout>
 
     </LinearLayout>
