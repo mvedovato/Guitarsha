@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
-import android.widget.SeekBar
 import android.widget.TextView
 import android.app.Activity
 import java.io.OutputStream
@@ -15,13 +14,13 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import java.io.IOException
-
+import me.tankery.lib.circularseekbar.CircularSeekBar
 
 class MainActivity : Activity() {
 
-    private lateinit var seekVolume: SeekBar
-    private lateinit var seekDrive: SeekBar
-    private lateinit var seekTone: SeekBar
+    private lateinit var seekVolume: CircularSeekBar
+    private lateinit var seekDrive: CircularSeekBar
+    private lateinit var seekTone: CircularSeekBar
 
     private lateinit var btnVolPlus: Button
     private lateinit var btnVolMinus: Button
@@ -36,7 +35,7 @@ class MainActivity : Activity() {
     private lateinit var btAdapter: BluetoothAdapter
     private var btSocket: BluetoothSocket? = null
     private var btOutput: OutputStream? = null
-    private var btConectado = false  // <-- Nuevo estado
+    private var btConectado = false
 
     private val SPP_UUID: UUID =
         UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
@@ -45,16 +44,12 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Bluetooth
         btAdapter = BluetoothAdapter.getDefaultAdapter()
 
-
         if (!btAdapter.isEnabled) {
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            startActivity(enableBtIntent)
+            startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
         }
 
-        // UI
         tvBtStatus = findViewById(R.id.tvBtStatus)
         btnConectar = findViewById(R.id.btnConectar)
 
@@ -66,6 +61,16 @@ class MainActivity : Activity() {
         seekDrive = findViewById(R.id.seekDrive)
         seekTone = findViewById(R.id.seekTone)
 
+        // Configuración por código (CLAVE)
+        seekVolume.max = 100f
+        seekVolume.progress = 50f
+
+        seekDrive.max = 100f
+        seekDrive.progress = 50f
+
+        seekTone.max = 100f
+        seekTone.progress = 50f
+
         btnVolPlus = findViewById(R.id.btnVolPlus)
         btnVolMinus = findViewById(R.id.btnVolMinus)
         btnDrvPlus = findViewById(R.id.btnDrvPlus)
@@ -73,8 +78,6 @@ class MainActivity : Activity() {
         btnTonPlus = findViewById(R.id.btnTonPlus)
         btnTonMinus = findViewById(R.id.btnTonMinus)
 
-
-        // Listeners
         configurarControl(seekVolume, "VOL")
         configurarControl(seekDrive, "DRV")
         configurarControl(seekTone, "TON")
@@ -89,31 +92,33 @@ class MainActivity : Activity() {
         btnTonMinus.setOnClickListener { bajar(seekTone) }
     }
 
-    private fun subir(seek: SeekBar) {
-        seek.progress = (seek.progress + 1).coerceAtMost(100)
+    private fun subir(seek: CircularSeekBar) {
+        seek.progress = (seek.progress + 1).coerceAtMost(100f)
     }
 
-    private fun bajar(seek: SeekBar) {
-        seek.progress = (seek.progress - 1).coerceAtLeast(0)
+    private fun bajar(seek: CircularSeekBar) {
+        seek.progress = (seek.progress - 1).coerceAtLeast(0f)
     }
 
-    private fun configurarControl(seek: SeekBar, tag: String) {
-        seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, value: Int, fromUser: Boolean) {
-                enviarValor(tag, value)
+    private fun configurarControl(seek: CircularSeekBar, tag: String) {
+        seek.setOnSeekBarChangeListener(object :
+            CircularSeekBar.OnCircularSeekBarChangeListener {
+
+            override fun onProgressChanged(
+                circularSeekBar: CircularSeekBar?,
+                progress: Float,
+                fromUser: Boolean
+            ) {
+                enviarValor(tag, progress.toInt())
             }
-            override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {}
+
+            override fun onStartTrackingTouch(seekBar: CircularSeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: CircularSeekBar?) {}
         })
     }
 
     private fun enviarValor(param: String, value: Int) {
-
-        // Verificar si el Bluetooth está realmente conectado antes de enviar
-        if (!btConectado || btOutput == null) {
-            Log.w("GuitarSHA", "⚠️ BT no conectado, no se envía")
-            return
-        }
+        if (!btConectado || btOutput == null) return
 
         val paramChar = when (param) {
             "VOL" -> 'V'
@@ -122,117 +127,60 @@ class MainActivity : Activity() {
             else -> return
         }
 
-        val payloadStr = ">$paramChar,$value,"
-        val payloadBytes = payloadStr.toByteArray(Charsets.US_ASCII)
+        val payload = ">$paramChar,$value,".toByteArray(Charsets.US_ASCII)
+        val chk = calcularXor(payload)
 
-        val chkByte = calcularXor(payloadBytes)
+        val frame = payload + chk + '<'.code.toByte()
 
-        val buffer = java.io.ByteArrayOutputStream()
-        buffer.write(payloadBytes)
-        buffer.write(chkByte.toInt())
-        buffer.write('<'.code)
-
-        val frameBytes = buffer.toByteArray()
-
-        val hexDump = frameBytes.joinToString(" ") {
-            String.format("%02X", it)
-        }
-
-        Log.d("GuitarSHA", hexDump)
-
-        // Intentar enviar por Bluetooth
         try {
-            btOutput!!.write(frameBytes)
+            btOutput!!.write(frame)
         } catch (e: IOException) {
-            Log.e("GuitarSHA", "❌ Error escribiendo BT", e)
             btConectado = false
-
-            // Cambiar UI si se pierde la conexión
             runOnUiThread {
                 tvBtStatus.text = "Desconectado"
-                tvBtStatus.setTextColor(
-                    getColor(android.R.color.holo_red_dark)
-                )
+                tvBtStatus.setTextColor(getColor(android.R.color.holo_red_dark))
             }
         }
     }
 
     private fun calcularXor(data: ByteArray): Byte {
         var xor = 0
-        for (b in data) {
-            xor = xor xor (b.toInt() and 0xFF)
-        }
+        for (b in data) xor = xor xor (b.toInt() and 0xFF)
         return xor.toByte()
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == 1001 &&
-            grantResults.isNotEmpty() &&
-            grantResults[0] == PackageManager.PERMISSION_GRANTED
-        ) {
-            Log.d("GuitarSHA", "✅ Permiso BLUETOOTH_CONNECT concedido")
-            conectarBluetooth("guitarsha") // ← MISMO nombre
-        } else {
-            Log.e("GuitarSHA", "❌ Permiso BLUETOOTH_CONNECT denegado")
-        }
-    }
-
     private fun conectarBluetooth(nombre: String) {
-        Log.d("GuitarSHA", "Intentando conectar a $nombre")
-
         if (!tienePermisoBluetooth()) {
-            Log.d("GuitarSHA", "🔐 Pidiendo permiso BLUETOOTH_CONNECT")
             pedirPermisoBluetooth()
-            return   // ⛔ CLAVE
-        }
-
-        val paired = btAdapter.bondedDevices
-        Log.d("GuitarSHA", "Dispositivos emparejados: ${paired.map { it.name }}")
-
-        val device = paired.firstOrNull { it.name == nombre }
-
-        if (device == null) {
-            Log.e("GuitarSHA", "❌ No se encontró $nombre entre los emparejados")
             return
         }
+
+        val device = btAdapter.bondedDevices.firstOrNull { it.name == nombre }
+            ?: return
 
         try {
             btSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
             btAdapter.cancelDiscovery()
             btSocket?.connect()
             btOutput = btSocket?.outputStream
-
-            btConectado = true  // <-- Conexión exitosa
-
-            Log.d("GuitarSHA", "✅ Conectado OK")
+            btConectado = true
 
             runOnUiThread {
                 tvBtStatus.text = "Conectado"
                 tvBtStatus.setTextColor(getColor(android.R.color.holo_green_dark))
             }
 
-        } catch (e: Exception) {
-            Log.e("GuitarSHA", "❌ Error al conectar", e)
-            btConectado = false  // <-- Si falla la conexión
+        } catch (_: Exception) {
+            btConectado = false
         }
     }
 
-    private fun tienePermisoBluetooth(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ActivityCompat.checkSelfPermission(
-                this,  // 👈 CLAVE
-                Manifest.permission.BLUETOOTH_CONNECT
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
-    }
+    private fun tienePermisoBluetooth(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) == PackageManager.PERMISSION_GRANTED
 
     private fun pedirPermisoBluetooth() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -243,5 +191,4 @@ class MainActivity : Activity() {
             )
         }
     }
-
 }
