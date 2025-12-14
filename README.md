@@ -7,7 +7,7 @@ La app permite controlar en tiempo real los parámetros:
 - **Drive**
 - **Tone**
 
-mediante perillas circulares (knobs) y botones incrementales, enviando los cambios por Bluetooth de forma eficiente.
+mediante perillas circulares (knobs) con animación suave y botones incrementales, enviando los cambios por Bluetooth de forma eficiente.
 
 ---
 
@@ -15,24 +15,34 @@ mediante perillas circulares (knobs) y botones incrementales, enviando los cambi
 
 - Conexión Bluetooth clásica (SPP)
 - Envío incremental de parámetros (solo cuando cambian)
-- Controles tipo pedal real
+- Controles tipo pedal real con animación suave
 - Indicador de estado Bluetooth
 - Compatible con módulos HC-05 / HC-06
 - Arquitectura simple y extensible
+- Presets guardables y cargables (P1…P5)
 
 ---
 
 ## 🎛️ Controles
 
 Cada parámetro tiene:
-- Perilla circular táctil
-- Botones `+` y `-`
+- Perilla circular táctil (CircularSeekBar) con animación
+- Botones `+` y `-` para incrementos finos
 - Valor numérico visible en el centro
 
 Parámetros:
 - `VOL` → Volume
 - `DRV` → Drive
 - `TON` → Tone
+
+---
+
+## 🔐 Permisos
+
+En Android 12+ se solicita:
+- `BLUETOOTH_CONNECT`
+
+La app maneja la solicitud de permisos en tiempo de ejecución.
 
 ---
 
@@ -52,15 +62,6 @@ Donde:
 
 ---
 
-## 🔐 Permisos
-
-En Android 12+ se solicita:
-- `BLUETOOTH_CONNECT`
-
-La app maneja la solicitud de permisos en tiempo de ejecución.
-
----
-
 ## 🧱 Tecnologías
 
 - Kotlin
@@ -72,10 +73,9 @@ La app maneja la solicitud de permisos en tiempo de ejecución.
 
 ## 🚀 Próximas mejoras
 
-- Presets (guardar / cargar)
-- Animaciones suaves en knobs
 - Feedback desde el microcontrolador
 - Modo sincronizado con hardware
+- Más presets o configuraciones avanzadas
 
 ---
 
@@ -91,4 +91,5 @@ La app maneja la solicitud de permisos en tiempo de ejecución.
 
 Proyecto personal / experimental  
 Pensado para control de efectos de guitarra en tiempo real 🎶
+
 

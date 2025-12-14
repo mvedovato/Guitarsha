@@ -46,6 +46,11 @@ class MainActivity : Activity() {
     private var btOutput: OutputStream? = null
     private var btConectado = false
 
+    private var animVol: ValueAnimator? = null
+    private var animDrv: ValueAnimator? = null
+    private var animTon: ValueAnimator? = null
+
+
     private val SPP_UUID: UUID =
         UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
 
@@ -189,26 +194,46 @@ class MainActivity : Activity() {
         val targetDrv = parts[1].toIntOrNull() ?: return
         val targetTon = parts[2].toIntOrNull() ?: return
 
+        // Cancelar animaciones anteriores si existen
+        animVol?.cancel()
+        animDrv?.cancel()
+        animTon?.cancel()
+
         val startVol = seekVolume.progress
         val startDrv = seekDrive.progress
         val startTon = seekTone.progress
 
-        val anim = ValueAnimator.ofFloat(0f, 1f)
-        anim.duration = 500 // duración en ms
-        anim.interpolator = DecelerateInterpolator()
-        anim.addUpdateListener { valueAnimator ->
-            val fraction = valueAnimator.animatedValue as Float
-
-            seekVolume.progress = startVol + (targetVol - startVol) * fraction
-            seekDrive.progress  = startDrv + (targetDrv - startDrv) * fraction
-            seekTone.progress   = startTon + (targetTon - startTon) * fraction
-
-            tvVolumeValue.text = seekVolume.progress.toInt().toString()
-            tvDriveValue.text  = seekDrive.progress.toInt().toString()
-            tvToneValue.text   = seekTone.progress.toInt().toString()
+        animVol = ValueAnimator.ofFloat(startVol, targetVol.toFloat()).apply {
+            duration = 500
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { valueAnimator ->
+                seekVolume.progress = valueAnimator.animatedValue as Float
+                tvVolumeValue.text = seekVolume.progress.toInt().toString()
+            }
+            start()
         }
-        anim.start()
+
+        animDrv = ValueAnimator.ofFloat(startDrv, targetDrv.toFloat()).apply {
+            duration = 500
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { valueAnimator ->
+                seekDrive.progress = valueAnimator.animatedValue as Float
+                tvDriveValue.text = seekDrive.progress.toInt().toString()
+            }
+            start()
+        }
+
+        animTon = ValueAnimator.ofFloat(startTon, targetTon.toFloat()).apply {
+            duration = 500
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { valueAnimator ->
+                seekTone.progress = valueAnimator.animatedValue as Float
+                tvToneValue.text = seekTone.progress.toInt().toString()
+            }
+            start()
+        }
     }
+
 
     // 🔵 Bluetooth
     private fun conectarBluetooth(nombre: String) {
