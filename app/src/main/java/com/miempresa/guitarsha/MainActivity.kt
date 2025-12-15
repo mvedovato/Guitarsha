@@ -19,7 +19,7 @@ import java.io.IOException
 import me.tankery.lib.circularseekbar.CircularSeekBar
 import android.animation.ValueAnimator
 import android.view.animation.DecelerateInterpolator
-
+import androidx.core.animation.doOnEnd
 
 class MainActivity : Activity() {
 
@@ -46,10 +46,10 @@ class MainActivity : Activity() {
     private var btOutput: OutputStream? = null
     private var btConectado = false
 
+    private var enviarDuranteAnimacion = true
     private var animVol: ValueAnimator? = null
     private var animDrv: ValueAnimator? = null
     private var animTon: ValueAnimator? = null
-
 
     private val SPP_UUID: UUID =
         UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
@@ -139,7 +139,10 @@ class MainActivity : Activity() {
             override fun onProgressChanged(circularSeekBar: CircularSeekBar?, progress: Float, fromUser: Boolean) {
                 val value = progress.toInt()
                 label.text = value.toString()
-                enviarValor(tag, value)
+                // Solo enviar si NO estamos animando un preset
+                if (enviarDuranteAnimacion) {
+                    enviarValor(tag, value)
+                }
             }
 
             override fun onStartTrackingTouch(seekBar: CircularSeekBar?) {}
@@ -184,9 +187,9 @@ class MainActivity : Activity() {
         Toast.makeText(this, "Preset $n guardado", Toast.LENGTH_SHORT).show()
     }
 
-    // 🔵 Presets con animación
+    // 🔵 Presets con animación y envío eficiente
     private fun cargarPreset(n: Int) {
-        val json = prefs.getString(presetKeys[n-1], null) ?: return
+        val json = prefs.getString(presetKeys[n - 1], null) ?: return
         val parts = json.split(",")
         if (parts.size != 3) return
 
@@ -194,7 +197,7 @@ class MainActivity : Activity() {
         val targetDrv = parts[1].toIntOrNull() ?: return
         val targetTon = parts[2].toIntOrNull() ?: return
 
-        // Cancelar animaciones anteriores si existen
+        // Cancelar animaciones anteriores
         animVol?.cancel()
         animDrv?.cancel()
         animTon?.cancel()
@@ -203,6 +206,10 @@ class MainActivity : Activity() {
         val startDrv = seekDrive.progress
         val startTon = seekTone.progress
 
+        // Desactivar envío mientras dura la animación
+        enviarDuranteAnimacion = false
+
+        // Animación Volume
         animVol = ValueAnimator.ofFloat(startVol, targetVol.toFloat()).apply {
             duration = 500
             interpolator = DecelerateInterpolator()
@@ -210,9 +217,11 @@ class MainActivity : Activity() {
                 seekVolume.progress = valueAnimator.animatedValue as Float
                 tvVolumeValue.text = seekVolume.progress.toInt().toString()
             }
+            doOnEnd { enviarValor("VOL", targetVol) }
             start()
         }
 
+        // Animación Drive
         animDrv = ValueAnimator.ofFloat(startDrv, targetDrv.toFloat()).apply {
             duration = 500
             interpolator = DecelerateInterpolator()
@@ -220,9 +229,11 @@ class MainActivity : Activity() {
                 seekDrive.progress = valueAnimator.animatedValue as Float
                 tvDriveValue.text = seekDrive.progress.toInt().toString()
             }
+            doOnEnd { enviarValor("DRV", targetDrv) }
             start()
         }
 
+        // Animación Tone
         animTon = ValueAnimator.ofFloat(startTon, targetTon.toFloat()).apply {
             duration = 500
             interpolator = DecelerateInterpolator()
@@ -230,10 +241,13 @@ class MainActivity : Activity() {
                 seekTone.progress = valueAnimator.animatedValue as Float
                 tvToneValue.text = seekTone.progress.toInt().toString()
             }
+            doOnEnd {
+                enviarValor("TON", targetTon)
+                enviarDuranteAnimacion = true  // reactivar envíos normales
+            }
             start()
         }
     }
-
 
     // 🔵 Bluetooth
     private fun conectarBluetooth(nombre: String) {

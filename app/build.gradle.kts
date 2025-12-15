@@ -46,4 +46,5 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     implementation("me.tankery.lib:circularSeekBar:1.4.2")
+    implementation ("androidx.core:core-ktx:1.12.0")
 }
