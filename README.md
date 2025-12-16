@@ -49,13 +49,12 @@ La app maneja la solicitud de permisos en tiempo de ejecución.
 ## 📡 Protocolo Bluetooth
 
 Cada cambio se envía como frame ASCII con checksum XOR:
+```
+>V,50,CHK<,30,CHK<
+>T,75,CHK<
 
-V,50,<CHK<
-D,30,<CHK<
-T,75,<CHK<
 
-
-Donde:
+Do```nde:
 - `V / D / T` = parámetro
 - valor = 0–100
 - `CHK` = XOR de los bytes anteriores
