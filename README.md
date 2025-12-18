@@ -50,11 +50,11 @@ La app maneja la solicitud de permisos en tiempo de ejecución.
 
 Cada cambio se envía como frame ASCII con checksum XOR:
 
-V,50,<CHK<
-D,30,<CHK<
-T,75,<CHK<
-
-
+```
+>V,50,CHK<
+>D,30,CHK<
+>T,75,CHK<
+```
 Donde:
 - `V / D / T` = parámetro
 - valor = 0–100
