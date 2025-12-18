@@ -199,17 +199,47 @@
 
         <LinearLayout
             android:orientation="horizontal"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginBottom="16dp">
 
-            <Button android:id="@+id/btnP1" android:text="P1" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <Button android:id="@+id/btnP2" android:text="P2" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <Button android:id="@+id/btnP3" android:text="P3" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <Button android:id="@+id/btnP4" android:text="P4" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <Button android:id="@+id/btnP5" android:text="P5" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <Button
+                android:id="@+id/btnP1"
+                android:text="P1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"/>
+
+            <Button
+                android:id="@+id/btnP2"
+                android:text="P2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"/>
+
+            <Button
+                android:id="@+id/btnP3"
+                android:text="P3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"/>
+
+            <Button
+                android:id="@+id/btnP4"
+                android:text="P4"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"/>
+
+            <Button
+                android:id="@+id/btnP5"
+                android:text="P5"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"/>
         </LinearLayout>
+
 
     </LinearLayout>
 </ScrollView>
