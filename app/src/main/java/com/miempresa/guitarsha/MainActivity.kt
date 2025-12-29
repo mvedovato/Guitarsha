@@ -116,6 +116,8 @@ class MainActivity : Activity() {
                 }
             }
         }
+        setEstadoBt(false)
+
     }
 
     private fun initKnob(seek: CircularSeekBar, label: TextView) {
@@ -166,12 +168,9 @@ class MainActivity : Activity() {
 
         try { btOutput!!.write(frame) }
         catch (e: IOException) {
-            btConectado = false
-            runOnUiThread {
-                tvBtStatus.text = "Desconectado"
-                tvBtStatus.setTextColor(getColor(android.R.color.holo_red_dark))
-            }
+            setEstadoBt(false)
         }
+
     }
 
     private fun calcularXor(data: ByteArray): Byte {
@@ -260,15 +259,29 @@ class MainActivity : Activity() {
             btAdapter.cancelDiscovery()
             btSocket?.connect()
             btOutput = btSocket?.outputStream
-            btConectado = true
+            setEstadoBt(true)
 
-            runOnUiThread {
+        } catch (e: Exception) {
+            setEstadoBt(false)
+        }
+
+    }
+
+    private fun setEstadoBt(conectado: Boolean) {
+        btConectado = conectado
+
+        runOnUiThread {
+            if (conectado) {
                 tvBtStatus.text = "Conectado"
                 tvBtStatus.setTextColor(getColor(android.R.color.holo_green_dark))
+                btnConectar.text = "Conectado"
+                btnConectar.isEnabled = false
+            } else {
+                tvBtStatus.text = "Desconectado"
+                tvBtStatus.setTextColor(getColor(android.R.color.holo_red_dark))
+                btnConectar.text = "Conectar BT"
+                btnConectar.isEnabled = true
             }
-
-        } catch (_: Exception) {
-            btConectado = false
         }
     }
 
