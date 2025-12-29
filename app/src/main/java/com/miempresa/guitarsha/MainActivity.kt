@@ -9,6 +9,8 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import android.app.Activity
+import android.os.Handler
+import android.os.Looper
 import java.io.OutputStream
 import java.util.UUID
 import android.Manifest
@@ -58,6 +60,12 @@ class MainActivity : Activity() {
     private val presetKeys = arrayOf("P1", "P2", "P3", "P4", "P5")
     private lateinit var prefs: android.content.SharedPreferences
 
+    private var reconectarHabilitado = false
+    private val handlerBt = Handler(Looper.getMainLooper())
+    private val intervaloChequeoMs = 3000L
+    private var ultimoNombreBt: String? = null
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -71,9 +79,12 @@ class MainActivity : Activity() {
         // UI base
         tvBtStatus = findViewById(R.id.tvBtStatus)
         btnConectar = findViewById(R.id.btnConectar)
-        btnConectar.setOnClickListener { conectarBluetooth("guitarsha") }
+        btnConectar.setOnClickListener {
+            ultimoNombreBt = "guitarsha"
+            conectarBluetooth("guitarsha")
+        }
 
-        // Knobs
+            // Knobs
         seekVolume = findViewById(R.id.seekVolume)
         seekDrive  = findViewById(R.id.seekDrive)
         seekTone   = findViewById(R.id.seekTone)
@@ -117,7 +128,13 @@ class MainActivity : Activity() {
             }
         }
         setEstadoBt(false)
+        handlerBt.postDelayed(chequeoBtRunnable, intervaloChequeoMs)
 
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handlerBt.removeCallbacks(chequeoBtRunnable)
     }
 
     private fun initKnob(seek: CircularSeekBar, label: TextView) {
@@ -276,6 +293,7 @@ class MainActivity : Activity() {
                 tvBtStatus.setTextColor(getColor(android.R.color.holo_green_dark))
                 btnConectar.text = "Conectado"
                 btnConectar.isEnabled = false
+                reconectarHabilitado = true
             } else {
                 tvBtStatus.text = "Desconectado"
                 tvBtStatus.setTextColor(getColor(android.R.color.holo_red_dark))
@@ -297,4 +315,49 @@ class MainActivity : Activity() {
             )
         }
     }
+
+    private fun bluetoothSigueConectado(): Boolean {
+        return try {
+            btSocket?.isConnected == true &&
+                    btOutput != null
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun intentarReconectar() {
+        if (!reconectarHabilitado || btConectado) return
+
+        Thread {
+            try {
+                btSocket?.close()
+                btSocket = null
+                btOutput = null
+
+                ultimoNombreBt?.let {
+                    conectarBluetooth(it)
+                }
+
+            } catch (e: Exception) {
+                // se reintenta en el próximo ciclo
+            }
+        }.start()
+    }
+
+
+    private val chequeoBtRunnable = object : Runnable {
+        override fun run() {
+
+            if (btConectado && !bluetoothSigueConectado()) {
+                setEstadoBt(false)
+            }
+
+            if (!btConectado) {
+                intentarReconectar()
+            }
+
+            handlerBt.postDelayed(this, intervaloChequeoMs)
+        }
+    }
+
 }
